@@ -57,3 +57,25 @@ uvicorn src.app.main:app --reload
   }
 }
 ```
+
+## Day 3: Schema 设计
+
+本阶段完成项目二核心数据模型设计：
+
+- `DocumentMetadata`
+- `DocumentInfo`
+- `ChunkInfo`
+- `UploadResponse`
+- `IndexRequest`
+- `IndexResponse`
+- `SearchRequest`
+- `SearchResponse`
+- `AskRequest`
+- `AskResponse`
+- `Citation`
+
+核心对象关系：
+
+```text
+Document -> Chunks -> Search Results -> Citations
+```
