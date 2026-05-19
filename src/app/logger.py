@@ -16,14 +16,16 @@ class JsonFormatter(logging.Formatter):
         }
 
         for field in (
-            "event",
-            "request_id",
-            "error_code",
-            "retryable",
-            "method",
-            "path",
-            "status_code",
-            "duration_ms",
+                "event",
+                "request_id",
+                "error_code",
+                "retryable",
+                "method",
+                "path",
+                "status_code",
+                "duration_ms",
+                "doc_id",
+                "uploaded_filename",
         ):
             if hasattr(record, field):
                 payload[field] = getattr(record, field)

@@ -56,21 +56,25 @@ class ChunkInfo(BaseModel):
     text: str = Field(..., examples=["CLIP shows vulnerability under adversarial perturbations..."])
     metadata: DocumentMetadata
 
+# 上传文档后的返回格式
 class UploadResponse(BaseModel):
     doc_id: str = Field(..., examples=["doc_001"])
     filename: str = Field(..., examples=["clip_robustness.md"])
     metadata: DocumentMetadata
     status: DocumentStatus = Field(default="uploaded", examples=["uploaded"])
 
+# 建立索引时的请求格式
 class IndexRequest(BaseModel):
     doc_id: str = Field(..., examples=["doc_001"])
 
+# 建立索引后的返回格式
 class IndexResponse(BaseModel):
     doc_id: str = Field(..., examples=["doc_001"])
     indexed: bool = Field(..., examples=[True])
+    # 这篇文档被切成了多少个 chunk
     chunk_count: int = Field(..., ge=0, examples=[12])
 
-
+# 检索时的过滤条件
 class SearchFilters(BaseModel):
     doc_type: DocType | None = Field(default=None, examples=["paper"])
     source: SourceType | None = Field(default=None, examples=["upload"])
@@ -82,12 +86,13 @@ class SearchRequest(BaseModel):
     # 默认 top_k = 5
     # 最小值是 1
     # 最大值是 20
+    # 检索时返回最相关的前 k 个 chunk
     top_k: int = Field(default=5, ge=1, le=20, examples=[5])
     # filters 可以是 SearchFilters
     # 也可以不传
     filters: SearchFilters | None = None
 
-
+# 一次检索返回的单条结果格式。
 class SearchResult(BaseModel):
     doc_id: str = Field(..., examples=["doc_001"])
     chunk_id: str = Field(..., examples=["doc_001_chunk_0003"])

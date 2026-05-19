@@ -40,6 +40,7 @@ def test_search_request_default_top_k():
     assert request.filters is None
 
 def test_search_request_rejects_invalid_top_k():
+    # 预期下面这段代码会抛出 ValidationError。如果真的抛了，测试通过；如果没抛，测试失败。
     with pytest.raises(ValidationError):
         SearchRequest(
             query="CLIP 的对抗鲁棒性怎么样？",
