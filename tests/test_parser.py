@@ -6,12 +6,15 @@ from src.app.services.parser import normalize_text, parse_document
 
 
 def test_parse_txt_success(tmp_path):
+    # 这里是在临时目录下创建一个文件路径。
     file_path = tmp_path / "note.txt"
+    # 这句是往 note.txt 里写入文本内容。
     file_path.write_text(
         "  This   is a RAG note.\n\n\nIt supports FastAPI.  ",
         encoding="utf-8",
     )
 
+    
     text = parse_document(str(file_path), filename="note.txt")
 
     assert "This is a RAG note." in text
