@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 
 from src.app.errors import AppError
 from src.app.logger import get_logger
+from src.app.services.document_store import DocumentStore
 from src.app.schemas import (
     DocType,
     DocumentMetadata,
@@ -23,6 +24,7 @@ from src.app.schemas import (
 
 
 logger = get_logger(__name__)
+document_store = DocumentStore()
 
 # 所有用户上传的原始文件，都先保存到 data/uploads 这个目录里
 # 比如你上传：sample.md
@@ -286,3 +288,12 @@ async def upload_document(
         metadata=metadata,
         status="uploaded",
     )
+
+# 查看当前系统里保存了哪些文档
+@app.get("/documents")
+def list_documents():
+    documents = document_store.list_documents()
+    return {
+        "documents": documents,
+        "count": len(documents),
+    }

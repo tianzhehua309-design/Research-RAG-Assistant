@@ -13,12 +13,16 @@ def normalize_chunk_text(text: str) -> str:
     text = text.replace("\r\n","\n").replace("\r","\n")
 
     lines: list[str] = []
+    # 按行遍历文本
     for line in text.split("\n"):
+        # 合并连续空格
+        # r"[ \u3000]+" 匹配一个或多个空格（包括全角空格）
         line = re.sub(r"[ \u3000]+", " ", line)
         line = line.strip()
         lines.append(line)
-
+    # 这句把列表里的每一行重新用 \n 拼起来。
     cleaned = "\n".join(lines)
+    # 如果出现 3 个或更多连续换行，就压缩成 2 个换行
     cleaned = re.sub(r"\n{3,}","\n\n",cleaned)
     return cleaned.strip()
 
@@ -32,10 +36,20 @@ def split_into_paragraphs(text: str) -> list[str]:
 
     if not cleaned:
         return []
-
+    # 按空行切分段落
+    # r"\n\s*\n"
+    # \n	一个换行
+    # \s*	0 个或多个空白字符
+    # \n	又一个换行
+    # 匹配两个换行，中间可以夹着空格、tab 等空白字符
     paragraphs = re.split(r"\n\s*\n", cleaned)
+    result = []
 
-    return [p.strip() for p in paragraphs if p.strip()]
+    for p in paragraphs:
+        if p.strip():
+            result.append(p.strip())
+
+    return result
 
 
 """
@@ -91,7 +105,7 @@ def split_long_text(
         if end >= len(text):
             break
 
-        start = end -overlap
+        start = end - overlap
 
     return chunks
 
@@ -144,17 +158,25 @@ def chunk_text(
 
     paragraphs = split_into_paragraphs(cleaned_text)
 
+    # 表示已经完成的 chunk 文本列表。
     raw_chunks: list[str] = []
+    # 表示当前正在组装的 chunk 里面有哪些段落。
     current_parts: list[str] = []
+    # 表示当前正在组装的 chunk 已经有多长。
     current_length = 0
 
     for paragraph in paragraphs:
         if len(paragraph) > chunk_size:
+            # 先把前面正在组装的 chunk 保存下来
             if current_parts:
+                # 如果 current_parts 里面已经攒了一些短段落，先把它们拼成一个完整 chunk，放进 raw_chunks。
                 raw_chunks.append("\n\n".join(current_parts).strip())
                 current_parts = []
                 current_length = 0
 
+            # 长段落单独切成多个 chunk
+            # append raw_chunks.append(["chunk1", "chunk2"])-》[["chunk1", "chunk2"]]
+            # extend raw_chunks.extend(["chunk1", "chunk2"])-》["chunk1", "chunk2"]
             raw_chunks.extend(
                 split_long_text(
                     paragraph,
@@ -165,21 +187,31 @@ def chunk_text(
             continue
 
         # 段落之间用两个换行连接，所以额外加 2
+        # 如果 current_parts 里已经有段落了，那么再拼接新段落时，中间要加两个换行符 \n\n，所以额外长度是 2。
         extra_length = 2 if current_parts else 0
+        # 计算加入当前段落后的总长度
         next_length = current_length + extra_length + len(paragraph)
 
         if next_length <= chunk_size:
             current_parts.append(paragraph)
+            current_length = next_length
+        # 如果超过 chunk_size，就保存旧 chunk，开启新 chunk
         else:
             if current_parts:
                 raw_chunks.append("\n\n".join(current_parts).strip())
 
             current_parts = [paragraph]
             current_length = len(paragraph)
-
+    
+    # 循环结束后，还需要把最后一个 current_parts 保存进去。
+    # 因为最后一个正在组装的 chunk，不一定在循环里触发了 else 保存。
+    # 否则最后一组段落会丢掉。
     if  current_parts:
         raw_chunks.append("\n\n".join(current_parts).strip())
 
+
+    # 把前面已经切好的 raw_chunks，
+    # 包装成带 doc_id、chunk_id、chunk_index、metadata 的标准 chunk 结构。
     chunks: list[dict[str, Any]] = []
 
     for index,chunk in enumerate(raw_chunks):
