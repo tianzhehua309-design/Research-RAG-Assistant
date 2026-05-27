@@ -124,3 +124,13 @@ class AskRequest(BaseModel):
 class AskResponse(BaseModel):
     answer: str = Field(..., examples=["根据检索到的文档，这篇论文主要讨论了……"])
     citations: list[Citation]
+
+class IndexRequest(BaseModel):
+    doc_id: str = Field(..., examples=["doc_123"])
+    chunk_size: int = Field(default=800, ge=100, le=3000)
+    overlap: int = Field(default=100, ge=0, le=1000)
+
+class IndexResponse(BaseModel):
+    doc_id: str
+    indexed: bool
+    chunk_count: int

@@ -14,12 +14,15 @@ from fastapi.responses import JSONResponse
 from src.app.errors import AppError
 from src.app.logger import get_logger
 from src.app.services.document_store import DocumentStore
+from src.app.services.indexer import index_document
 from src.app.schemas import (
     DocType,
     DocumentMetadata,
     HealthResponse,
     SourceType,
     UploadResponse,
+    IndexRequest,
+    IndexResponse,
 )
 
 
@@ -269,6 +272,26 @@ async def upload_document(
         tag=tag,
     )
 
+    metadata_dict = {
+        "doc_type": doc_type.value if hasattr(doc_type, "value") else str(doc_type),
+        "source": source.value if hasattr(source, "value") else str(source),
+        "tag": tag,
+    }
+
+    document = {
+        "doc_id": doc_id,
+        "filename": safe_filename,
+        "file_path": str(saved_path),
+        "metadata": metadata_dict,
+        "status": "uploaded",
+        "indexed": False,
+        "chunk_count": 0,
+    }
+
+    # 关键：把 document metadata 真正写入 data/metadata/documents.json
+    document_store.save_document(document)
+
+
     logger.info(
         "document uploaded",
         extra={
@@ -297,3 +320,42 @@ def list_documents():
         "documents": documents,
         "count": len(documents),
     }
+
+@app.post("/documents/index", response_model=IndexResponse)
+def index_document_endpoint(
+    request: Request,
+    # payload 表示用户传进来的 JSON 请求体。
+    payload: IndexRequest,
+) -> IndexResponse:
+    request_id = get_request_id(request)
+
+    logger.info(
+        "document index called",
+        extra={
+            "event": "document_index_called",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "doc_id": payload.doc_id,
+        },
+    )
+
+    result = index_document(
+        doc_id=payload.doc_id,
+        chunk_size=payload.chunk_size,
+        overlap=payload.overlap,
+    )
+
+    logger.info(
+        "document index succeeded",
+        extra={
+            "event": "document_index_succeeded",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "doc_id": payload.doc_id,
+            "chunk_count": result["chunk_count"],
+        },
+    )
+
+    return IndexResponse(**result)
