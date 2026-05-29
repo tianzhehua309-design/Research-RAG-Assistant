@@ -100,6 +100,8 @@ class ChromaVectorStore:
         # metadata 过滤条件，比如只查 paper 类型文档
         filters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
+        where = filters or None
+        
         if not query_embedding:
             raise AppError(
                 code="EMPTY_QUERY_EMBEDDING",
@@ -118,7 +120,7 @@ class ChromaVectorStore:
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
-            where=filters,
+            where=where,
             # 告诉 Chroma：返回结果里需要带哪些内容。
             include=["documents", "metadatas", "distances"],
         )

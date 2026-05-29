@@ -15,6 +15,8 @@ from src.app.errors import AppError
 from src.app.logger import get_logger
 from src.app.services.document_store import DocumentStore
 from src.app.services.indexer import index_document
+from src.app.schemas import SearchRequest, SearchResponse
+from src.app.services.retriever import search_chunks
 from src.app.schemas import (
     DocType,
     DocumentMetadata,
@@ -359,3 +361,50 @@ def index_document_endpoint(
     )
 
     return IndexResponse(**result)
+
+
+@app.post("/search/chunks", response_model=SearchResponse)
+def search_chunks_endpoint(
+    request: Request,
+    payload: SearchRequest,
+) -> SearchResponse:
+    request_id = get_request_id(request)
+
+    filters = {}
+    if payload.filters is not None:
+        filters = payload.filters.model_dump(exclude_none=True)
+
+    logger.info(
+        "search chunks called",
+        extra={
+            "event": "search_chunks_called",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "top_k": payload.top_k,
+        },
+    )
+
+    results = search_chunks(
+        query=payload.query,
+        top_k=payload.top_k,
+        filters=filters,
+    )
+
+    logger.info(
+        "search chunks succeeded",
+        extra={
+            "event": "search_chunks_succeeded",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "result_count": len(results),
+        },
+    )
+
+    return SearchResponse(
+        query=payload.query,
+        top_k=payload.top_k,
+        filters=filters,
+        results=results,
+    )

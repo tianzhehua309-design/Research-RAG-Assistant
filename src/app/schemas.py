@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal,Any
 
 from pydantic import BaseModel,Field
 
@@ -134,3 +134,54 @@ class IndexResponse(BaseModel):
     doc_id: str
     indexed: bool
     chunk_count: int
+
+# 搜索时的过滤条件。
+class SearchFilters(BaseModel):
+    doc_type: str | None = Field(
+        default=None,
+        examples=["paper"],
+        description="Filter by document type, such as paper, experiment, or meeting.",
+    )
+    tag: str | None = Field(
+        default=None,
+        examples=["VLM"],
+        description="Filter by tag.",
+    )
+    source: str | None = Field(
+        default=None,
+        examples=["upload"],
+        description="Filter by source.",
+    )
+
+# /search/chunks 的请求体。
+class SearchRequest(BaseModel):
+    query: str = Field(
+        ...,
+        min_length=1,
+        examples=["CLIP 的对抗鲁棒性怎么样？"],
+    )
+    top_k: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        examples=[5],
+    )
+    filters: SearchFilters | None = Field(
+        default=None,
+        description="Optional metadata filters.",
+    )
+
+# 每一条检索结果。
+class SearchResult(BaseModel):
+    chunk_id: str
+    doc_id: str
+    text: str
+    metadata: dict[str, Any]
+    distance: float | None = None
+    score: float
+
+class SearchResponse(BaseModel):
+    query: str
+    top_k: int
+    filters: dict[str, Any]
+    results: list[SearchResult]
