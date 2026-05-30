@@ -1,6 +1,6 @@
 from typing import Literal,Any
 
-from pydantic import BaseModel,Field
+from pydantic import BaseModel,Field,field_validator
 
 # 基础响应
 class HealthResponse(BaseModel):
@@ -185,3 +185,113 @@ class SearchResponse(BaseModel):
     top_k: int
     filters: dict[str, Any]
     results: list[SearchResult]
+
+# 表示答案的证据来源。每一个 citation 对应一个被检索出来的 chunk。
+class Citation(BaseModel):
+    doc_id: str = Field(
+        ...,
+        examples=["doc_001"],
+        description="来源文档 ID",
+    )
+    chunk_id: str = Field(
+        ...,
+        examples=["doc_001_chunk_0003"],
+        description="来源 chunk ID",
+    )
+    filename: str | None = Field(
+        default=None,
+        examples=["clip_robustness.md"],
+        description="来源文件名",
+    )
+    source: str | None = Field(
+        default=None,
+        examples=["upload"],
+        description="文档来源，例如 upload / sample",
+    )
+    doc_type: str | None = Field(
+        default=None,
+        examples=["paper"],
+        description="文档类型，例如 paper / experiment / meeting",
+    )
+    tag: str | None = Field(
+        default=None,
+        examples=["RAG"],
+        description="文档标签",
+    )
+    text_snippet: str = Field(
+        ...,
+        examples=["RAG 系统的基本流程包括文档上传、chunking、embedding 和检索。"],
+        description="用于支撑答案的原文片段",
+    )
+    score: float = Field(
+        ...,
+        ge=0.0,
+        examples=[0.82],
+        description="检索相关性分数",
+    )
+
+# 用户请求
+class AskRequest(BaseModel):
+    question: str = Field(
+        ...,
+        examples=["RAG 的基本流程是什么？"],
+        description="用户提出的问题",
+    )
+    top_k: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        examples=[5],
+        description="检索返回的 chunk 数量",
+    )
+    filters: dict[str, str] | None = Field(
+        default=None,
+        examples=[{"doc_type": "paper", "tag": "RAG"}],
+        description="metadata 过滤条件，目前支持 doc_type、tag、source",
+    )
+    # validator 做了空字符串检查
+    @field_validator("question")
+    @classmethod
+    def validate_question(cls, value: str) -> str:
+        cleaned = value.strip()
+
+        if not cleaned:
+            raise ValueError("question 不能为空")
+
+        return cleaned
+
+    @field_validator("filters")
+    @classmethod
+    def validate_filters(
+        cls,
+        value: dict[str, str] | None,
+    ) -> dict[str, str] | None:
+        if value is None:
+            return None
+
+        allowed_keys = {"doc_type", "tag", "source"}
+
+        for key, filter_value in value.items():
+            if key not in allowed_keys:
+                raise ValueError(
+                    "filters 只支持 doc_type、tag、source"
+                )
+
+            if not isinstance(filter_value, str) or not filter_value.strip():
+                raise ValueError(
+                    "filters 的值必须是非空字符串"
+                )
+
+        return value
+
+
+class AskResponse(BaseModel):
+    answer: str = Field(
+        ...,
+        examples=["根据检索到的资料，RAG 的基本流程包括文档上传、解析、切分、向量化、检索和生成回答。"],
+        description="基于检索上下文生成的回答",
+    )
+    citations: list[Citation] = Field(
+        default_factory=list,
+        description="答案引用的来源片段",
+    )
