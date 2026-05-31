@@ -175,6 +175,7 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     chunk_id: str
     doc_id: str
+    filename: str = ""
     text: str
     metadata: dict[str, Any]
     distance: float | None = None
