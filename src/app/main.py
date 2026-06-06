@@ -16,6 +16,7 @@ from src.app.logger import get_logger
 from src.app.services.document_store import DocumentStore
 from src.app.services.indexer import index_document
 from src.app.schemas import SearchRequest, SearchResponse
+from src.app.services.qa_service import answer_question
 from src.app.services.retriever import search_chunks
 from src.app.schemas import (
     DocType,
@@ -25,6 +26,8 @@ from src.app.schemas import (
     UploadResponse,
     IndexRequest,
     IndexResponse,
+    AskRequest,
+    AskResponse,
 )
 
 
@@ -408,3 +411,36 @@ def search_chunks_endpoint(
         filters=filters,
         results=results,
     )
+
+@app.post("/qa/ask", response_model=AskResponse)
+def ask_qa(
+    request: Request,
+    payload: AskRequest,
+) -> AskResponse:
+    request_id = get_request_id(request)
+
+    logger.info(
+        "qa ask called",
+        extra={
+            "event": "qa_ask_called",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "top_k": payload.top_k,
+        },
+    )
+
+    result = answer_question(payload)
+
+    logger.info(
+        "qa ask succeeded",
+        extra={
+            "event": "qa_ask_succeeded",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "citation_count": len(result.citations),
+        },
+    )
+
+    return result
