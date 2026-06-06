@@ -430,7 +430,10 @@ def ask_qa(
         },
     )
 
-    result = answer_question(payload)
+    result = answer_question(
+        payload=payload,
+        request_id=request_id,
+    )
 
     logger.info(
         "qa ask succeeded",

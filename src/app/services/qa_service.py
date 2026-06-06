@@ -5,11 +5,17 @@ from src.app.services.context_packer import pack_context
 from src.app.services.retriever import search_chunks as retrieve_chunks
 
 
-def answer_question(payload: AskRequest) -> AskResponse:
-    filters = payload.filters
+def answer_question(
+    payload: AskRequest,
+    request_id: str | None = None,
+) -> AskResponse:
+    filters = None
 
     if payload.filters is not None:
-        filters = payload.filters.model_dump(exclude_none=True)
+        if hasattr(payload.filters, "model_dump"):
+            filters = payload.filters.model_dump(exclude_none=True)
+        else:
+            filters = payload.filters
 
     search_results = retrieve_chunks(
         query=payload.question,
